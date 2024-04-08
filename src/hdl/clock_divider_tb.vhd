@@ -11,8 +11,8 @@
 --| ---------------------------------------------------------------------------
 --|
 --| FILENAME      : clock_divider_tb.vhd (TEST BENCH)
---| AUTHOR(S)     : Capt Phillip Warner
---| CREATED       : 03/2017
+--| AUTHOR(S)     : C3C Griffin Greenwood
+--| CREATED       : 04/2024
 --| DESCRIPTION   : This file tests the generic clock divider.
 --|
 --| DOCUMENTATION : None
