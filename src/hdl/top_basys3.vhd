@@ -118,19 +118,48 @@ architecture top_basys3_arch of top_basys3 is
         );
     end component clock_divider;
     
+    signal w_floor : std_logic_vector (3 downto 0);
+    signal w_clk   : std_logic;
+    signal w_reset_elevator : std_logic;
+    signal w_reset_clk : std_logic;
+    
 begin
 	-- PORT MAPS ----------------------------------------
-
+    elevator_controller_inst    : elevator_controller_fsm
+        port map (
+            i_clk => w_clk,
+            i_reset => w_reset_elevator,
+            i_up_down => sw(1),
+            i_stop => sw(0),
+            o_floor => w_floor
+            );
 	
-	
+	sevenSegDecoder_inst   : sevenSegDecoder
+	   port map (
+	       i_D => w_floor,
+	       o_S => seg(6 downto 0)
+	       );
+	       
+	clock_divider_inst     : clock_divider
+	   generic map (k_DIV => 25000000)
+	   port map (
+	       i_clk => clk,
+	       i_reset => w_reset_clk,
+	       o_clk => w_clk
+	       );
 	-- CONCURRENT STATEMENTS ----------------------------
-	
+	w_reset_elevator <= btnR or btnU;
+	w_reset_clk <= btnL or btnU;
 	-- LED 15 gets the FSM slow clock signal. The rest are grounded.
-	
+	LED(15) <= w_clk;
+	LED(14 downto 0) <= (others => '0');
 
 	-- leave unused switches UNCONNECTED. Ignore any warnings this causes.
 	
 	-- wire up active-low 7SD anodes (an) as required
+	an(2) <= '0';
 	-- Tie any unused anodes to power ('1') to keep them off
-	
+	an(3) <= '1';
+	an(1) <= '1';
+	an(0) <= '1';
 end top_basys3_arch;
