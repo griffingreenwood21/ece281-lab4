@@ -98,8 +98,7 @@ begin
 			  
 	o_SEL  <=  "0111" when f_sel = "11" else
 			   "1011" when f_sel = "10" else
-			   "1101" when f_sel = "01" else
-			   "1110";
+			   "1111";
 		
 end behavioral;
 

@@ -79,6 +79,7 @@ entity top_basys3 is
         btnU    :   in std_logic; -- master_reset
         btnL    :   in std_logic; -- clk_reset
         btnR    :   in std_logic; -- fsm_reset
+        btnD    :   in std_logic; -- tdm_reset
         
         -- outputs
         led :   out std_logic_vector(15 downto 0);
@@ -97,7 +98,7 @@ architecture top_basys3_arch of top_basys3 is
                i_reset   : in  STD_LOGIC;
                i_stop    : in  STD_LOGIC;
                i_up_down : in  STD_LOGIC;
-               o_floor   : out STD_LOGIC_VECTOR (3 downto 0)           
+               o_floor   : out STD_LOGIC_VECTOR (7 downto 0)           
                );
     end component elevator_controller_fsm;
   
@@ -118,10 +119,25 @@ architecture top_basys3_arch of top_basys3 is
         );
     end component clock_divider;
     
-    signal w_floor : std_logic_vector (3 downto 0);
+    component TDM4 is
+        generic ( constant k_WIDTH : natural  := 4); -- bits in input and output
+        Port ( i_clk        : in  STD_LOGIC;
+               i_reset        : in  STD_LOGIC; -- asynchronous
+               i_D3         : in  STD_LOGIC_VECTOR (k_WIDTH - 1 downto 0);
+               i_D2         : in  STD_LOGIC_VECTOR (k_WIDTH - 1 downto 0);
+               i_D1         : in  STD_LOGIC_VECTOR (k_WIDTH - 1 downto 0);
+               i_D0         : in  STD_LOGIC_VECTOR (k_WIDTH - 1 downto 0);
+               o_data        : out STD_LOGIC_VECTOR (k_WIDTH - 1 downto 0);
+               o_sel        : out STD_LOGIC_VECTOR (3 downto 0)    -- selected data line (one-cold)
+        );
+    end component TDM4;
+    
+    signal w_floor : std_logic_vector (7 downto 0);
     signal w_clk   : std_logic;
     signal w_reset_elevator : std_logic;
     signal w_reset_clk : std_logic;
+    signal w_clkTDM : std_logic;
+    signal w_data : std_logic_vector (3 downto 0);
     
 begin
 	-- PORT MAPS ----------------------------------------
@@ -136,7 +152,7 @@ begin
 	
 	sevenSegDecoder_inst   : sevenSegDecoder
 	   port map (
-	       i_D => w_floor,
+	       i_D => w_data,
 	       o_S => seg(6 downto 0)
 	       );
 	       
@@ -147,6 +163,27 @@ begin
 	       i_reset => w_reset_clk,
 	       o_clk => w_clk
 	       );
+	
+	-- set TDM clock divider to 1 kHz
+	clock_dividerTDM_inst     : clock_divider
+	   generic map (k_DIV => 50000)
+	   port map (
+	       i_clk => clk,
+	       i_reset => w_reset_clk,
+	       o_clk => w_clkTDM
+	       );
+	
+	TDM_inst   : TDM4
+	   port map (
+	       i_clk => w_clkTDM,
+	       i_reset => btnD,
+	       i_D0 => "0000",
+	       i_D1 => "0000",
+	       i_D2 => w_floor(3 downto 0),
+	       i_D3 => w_floor(7 downto 4),
+	       o_sel => an,
+	       o_data => w_data
+	       );
 	-- CONCURRENT STATEMENTS ----------------------------
 	w_reset_elevator <= btnR or btnU;
 	w_reset_clk <= btnL or btnU;
@@ -155,11 +192,5 @@ begin
 	LED(14 downto 0) <= (others => '0');
 
 	-- leave unused switches UNCONNECTED. Ignore any warnings this causes.
-	
-	-- wire up active-low 7SD anodes (an) as required
-	an(2) <= '0';
-	-- Tie any unused anodes to power ('1') to keep them off
-	an(3) <= '1';
-	an(1) <= '1';
-	an(0) <= '1';
+
 end top_basys3_arch;
